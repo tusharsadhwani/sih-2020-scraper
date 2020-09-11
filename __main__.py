@@ -1,54 +1,66 @@
+"""SIH 2020 Problem Statement Scraper"""
 import pickle
 import os
+import sys
 from requests_html import HTMLSession
 
+
 def store_problems():
+    """Scrapes the website and stores all the problems locally"""
     session = HTMLSession()
     problems = []
 
     for index in range(1, 37):
         page = session.get(f'https://www.sih.gov.in/sih2020PS?page={index}')
 
-        table = page.html.find('#table_id')[0]
-        thead, tbody = table.element
+        table = page.html.find('#dataTablePS')[0]
+        _, tbody, _ = table.element
 
-        for tr in tbody:
-            org = tr[1].text
-            code = tr[4].text
-            field = tr[6].text
-            
-            title = tr[2][0].text
+        for row in tbody:
+            org = row[0].text
+            code = row[3].text
+            field = row[4].text
 
-            desc_table = tr[2][1][0][1][1][0]        
+            title = row[1][0].text
+
+            desc_table = row[1][1][0][1][1][0]
             description = desc_table[0][0][1][0].text
-            
+
             problems.append([code, title, org, field, description])
 
-    with open('problems.pickle', 'wb') as f:
-        pickle.dump(problems, f)
+    with open('problems.pickle', 'wb') as problems_file:
+        pickle.dump(problems, problems_file)
+
 
 def search_problems():
+    """Search through the problemset"""
     if not os.path.exists('problems.pickle'):
-        print('Database not found')
-        return
-    
-    with open('problems.pickle', 'rb') as f:
-        problems = pickle.load(f)
-    
+        print('Problems not found. Trying to download...')
+        store_problems()
+
+    with open('problems.pickle', 'rb') as problems_file:
+        problems = pickle.load(problems_file)
+
     while True:
-        query = input('Enter code or title> ')
+        try:
+            query = input('Enter code or title> ')
+        except KeyboardInterrupt:
+            sys.exit()
 
         for prob in problems:
             code = prob[0]
             title = prob[1]
-            
+
             if query.lower() in code.lower():
-                for i in prob: print(i, end='\n\n')
+                for i in prob:
+                    print(i, end='\n\n')
                 print('-'*40)
-            
+
             elif query.lower() in title.lower():
-                for i in prob: print(i, end='\n\n')
+                for i in prob:
+                    print(i, end='\n\n')
                 print('-'*40)
+
 
 if __name__ == "__main__":
     search_problems()
